@@ -36,6 +36,17 @@ npm run dev
 
 This will start the game on `http://localhost:5173` (or another port if 5173 is in use). Open this URL in your browser to play the game.
 
+## How to Play
+
+Use the following controls to move your crab (red box) around the arena:
+
+- `W` - Move forward
+- `A` - Move left
+- `S` - Move backward
+- `D` - Move right
+
+The goal is to navigate around the arena and eventually fight the AI crabs (blue boxes).
+
 ## Project Structure
 
 - `index.html`: Main HTML file with the canvas element for rendering
@@ -49,11 +60,12 @@ This will start the game on `http://localhost:5173` (or another port if 5173 is 
 - Placeholder models for player and AI crabs
 - Basic lighting setup
 - Responsive design (adapts to window size)
+- Player movement controls (WASD keys)
 
 ## Future Development
 
 - Replace placeholder models with actual 3D crab models
-- Add player controls for movement and attacks
+- Add attack mechanics
 - Implement AI behavior for opponent crabs
 - Add health system and combat mechanics
 - Add sound effects and background music

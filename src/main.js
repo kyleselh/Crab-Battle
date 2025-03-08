@@ -73,6 +73,87 @@ aiCrab.position.set(3, 0.25, 3) // Position offset from the player
 aiCrab.castShadow = true
 scene.add(aiCrab)
 
+// ===== PLAYER CONTROLS SETUP =====
+// Object to track which keys are currently pressed
+const keys = {
+  w: false, // Forward
+  a: false, // Left
+  s: false, // Backward
+  d: false  // Right
+}
+
+// Movement speed for the player crab
+const playerSpeed = 0.1
+
+// Function to handle keydown events
+function onKeyDown(event) {
+  // Convert key to lowercase to handle both uppercase and lowercase
+  const key = event.key.toLowerCase()
+  
+  // Check if the pressed key is one of our control keys
+  if (keys.hasOwnProperty(key)) {
+    // Set the key state to true (pressed)
+    keys[key] = true
+  }
+}
+
+// Function to handle keyup events
+function onKeyUp(event) {
+  // Convert key to lowercase to handle both uppercase and lowercase
+  const key = event.key.toLowerCase()
+  
+  // Check if the released key is one of our control keys
+  if (keys.hasOwnProperty(key)) {
+    // Set the key state to false (released)
+    keys[key] = false
+  }
+}
+
+// Add event listeners for keyboard input
+window.addEventListener('keydown', onKeyDown)
+window.addEventListener('keyup', onKeyUp)
+
+// Function to update player position based on key presses
+function updatePlayerPosition() {
+  // Store the original rotation
+  const originalRotation = playerCrab.rotation.y
+  
+  // Move forward (decrease Z position) when W is pressed
+  if (keys.w) {
+    playerCrab.position.z -= playerSpeed
+    playerCrab.rotation.y = Math.PI // Rotate to face forward
+  }
+  
+  // Move backward (increase Z position) when S is pressed
+  if (keys.s) {
+    playerCrab.position.z += playerSpeed
+    playerCrab.rotation.y = 0 // Rotate to face backward
+  }
+  
+  // Move left (decrease X position) when A is pressed
+  if (keys.a) {
+    playerCrab.position.x -= playerSpeed
+    playerCrab.rotation.y = Math.PI / 2 // Rotate to face left
+  }
+  
+  // Move right (increase X position) when D is pressed
+  if (keys.d) {
+    playerCrab.position.x += playerSpeed
+    playerCrab.rotation.y = -Math.PI / 2 // Rotate to face right
+  }
+  
+  // Limit player movement to stay within the arena bounds
+  // Arena size is 20x20, centered at origin, so valid positions are -10 to 10
+  const arenaHalfSize = 10
+  playerCrab.position.x = Math.max(-arenaHalfSize + 1, Math.min(arenaHalfSize - 1, playerCrab.position.x))
+  playerCrab.position.z = Math.max(-arenaHalfSize + 1, Math.min(arenaHalfSize - 1, playerCrab.position.z))
+  
+  // If no movement keys are pressed, keep the current rotation
+  if (!keys.w && !keys.a && !keys.s && !keys.d) {
+    playerCrab.rotation.y = originalRotation
+  }
+}
+
 // ===== WINDOW RESIZE HANDLER =====
 // Update renderer and camera when window is resized
 window.addEventListener('resize', () => {
@@ -90,8 +171,10 @@ window.addEventListener('resize', () => {
 function animate() {
   requestAnimationFrame(animate)
   
-  // Add simple rotation to the crabs to show they're 3D objects
-  playerCrab.rotation.y += 0.01
+  // Update player position based on key presses
+  updatePlayerPosition()
+  
+  // Add simple rotation to the AI crab to show it's a 3D object
   aiCrab.rotation.y += 0.01
   
   // Render the scene with the camera
