@@ -396,3 +396,254 @@ document.body.appendChild(defeatCounterDiv);
 function updateDefeatCounter() {
   defeatCounterDiv.textContent = `Crabs Defeated: ${crabsDefeated}`;
 }
+
+// Function to update health bars
+function updateHealthBars() {
+  playerHealthBar.style.width = `${playerHealth}%`;
+  aiHealthBar.style.width = `${aiHealth}%`;
+}
+
+// Function to check for collision between crabs
+function checkAttackCollision() {
+  // Only check collision if player is attacking
+  if ((isAttacking && attackAnimationTime === attackDuration / 2) || 
+      (isHeavyAttacking && heavyAttackAnimationTime === heavyAttackDuration / 2)) {
+    
+    // Calculate distance between crabs
+    const dx = playerCrab.position.x - aiCrab.position.x;
+    const dz = playerCrab.position.z - aiCrab.position.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    
+    // Calculate attack range based on attack type
+    const attackRange = isHeavyAttacking ? 3.0 : 2.5;
+    
+    // If crabs are close enough, player damages AI
+    if (distance < attackRange) {
+      // Apply damage based on attack type
+      const damage = isHeavyAttacking ? heavyDamageAmount : damageAmount;
+      aiHealth = Math.max(0, aiHealth - damage);
+      updateHealthBars();
+      
+      // Visual feedback for hit
+      createHitEffect(aiCrab.position);
+    }
+  }
+}
+
+// Function to create visual hit effect
+function createHitEffect(position) {
+  // Create a simple particle effect at the hit position
+  const particles = new THREE.Group();
+  
+  for (let i = 0; i < 8; i++) {
+    const particle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xFFFF00 })
+    );
+    
+    // Random position offset
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * 0.5;
+    particle.position.set(
+      position.x + Math.cos(angle) * radius,
+      position.y + 0.5,
+      position.z + Math.sin(angle) * radius
+    );
+    
+    particles.add(particle);
+  }
+  
+  scene.add(particles);
+  
+  // Remove particles after animation
+  setTimeout(() => {
+    scene.remove(particles);
+    particles.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+    });
+  }, 300);
+}
+
+// Function to respawn the AI crab with full health
+function respawnAiCrab() {
+  // Increment the defeat counter
+  crabsDefeated++;
+  updateDefeatCounter();
+  
+  // Reset AI health to max
+  aiHealth = maxHealth;
+  updateHealthBars();
+  
+  // Reposition the AI crab at a random position within the arena
+  const arenaHalfSize = 10;
+  const randomX = Math.random() * (arenaHalfSize * 2 - 2) - arenaHalfSize + 1;
+  const randomZ = Math.random() * (arenaHalfSize * 2 - 2) - arenaHalfSize + 1;
+  
+  aiCrab.position.set(randomX, 0.25, randomZ);
+  
+  console.log('AI Crab respawned with full health!');
+}
+
+// Function to handle key down events
+function onKeyDown(event) {
+  if (!gameStarted) return; // Only process input if game has started
+  
+  // Prevent default behavior for game controls
+  if (['w', 'a', 's', 'd', 'e', 'shift'].includes(event.key.toLowerCase())) {
+    event.preventDefault();
+  }
+  
+  // Update key states
+  switch (event.key.toLowerCase()) {
+    case 'w':
+      keys.w = true;
+      break;
+    case 'a':
+      keys.a = true;
+      break;
+    case 's':
+      keys.s = true;
+      break;
+    case 'd':
+      keys.d = true;
+      break;
+    case 'shift':
+      keys.shift = true;
+      // Initiate dodge if not already dodging and cooldown is over
+      if (!isDodging && dodgeCooldown === 0) {
+        isDodging = true;
+        dodgeAnimationTime = 0;
+      }
+      break;
+    case 'e':
+      keys.e = true;
+      // Initiate heavy attack if not already attacking and not dodging
+      if (!isHeavyAttacking && !isAttacking && !isDodging) {
+        isHeavyAttacking = true;
+        heavyAttackAnimationTime = 0;
+      }
+      break;
+  }
+}
+
+// Function to handle key up events
+function onKeyUp(event) {
+  if (!gameStarted) return; // Only process input if game has started
+  
+  // Update key states
+  switch (event.key.toLowerCase()) {
+    case 'w':
+      keys.w = false;
+      break;
+    case 'a':
+      keys.a = false;
+      break;
+    case 's':
+      keys.s = false;
+      break;
+    case 'd':
+      keys.d = false;
+      break;
+    case 'shift':
+      keys.shift = false;
+      break;
+    case 'e':
+      keys.e = false;
+      break;
+  }
+}
+
+// Function to handle mouse movement
+function onMouseMove(event) {
+  if (!gameStarted) return; // Only process input if game has started
+  
+  // Update mouse position
+  mousePosition.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mousePosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  
+  updateMouseWorldPosition();
+}
+
+// Function to update the world position based on mouse coordinates
+function updateMouseWorldPosition() {
+  // Convert mouse position to 3D ray
+  raycaster.setFromCamera(mousePosition, camera);
+  
+  // Create a plane at the player's height
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  
+  // Find where the ray intersects the plane
+  const targetPoint = new THREE.Vector3();
+  raycaster.ray.intersectPlane(plane, targetPoint);
+  
+  // Store the target point
+  mouseWorldPosition.copy(targetPoint);
+}
+
+// Function to handle mouse down events
+function onMouseDown(event) {
+  if (!gameStarted) return; // Only process input if game has started
+  
+  // Left mouse button
+  if (event.button === 0) {
+    isMouseDown = true;
+    
+    // Initiate basic attack if not already attacking and not dodging
+    if (!isAttacking && !isHeavyAttacking && !isDodging) {
+      isAttacking = true;
+      attackAnimationTime = 0;
+    }
+  }
+}
+
+// Function to handle mouse up events
+function onMouseUp(event) {
+  if (!gameStarted) return; // Only process input if game has started
+  
+  // Left mouse button
+  if (event.button === 0) {
+    isMouseDown = false;
+  }
+}
+
+// Add event listeners for keyboard and mouse input
+window.addEventListener('keydown', onKeyDown);
+window.addEventListener('keyup', onKeyUp);
+window.addEventListener('mousemove', onMouseMove);
+window.addEventListener('mousedown', onMouseDown);
+window.addEventListener('mouseup', onMouseUp);
+
+// Raycaster for mouse position in 3D space
+const raycaster = new THREE.Raycaster();
+
+// Function to update player position
+function updatePlayerPosition() {
+  // Update mouse world position
+  updateMouseWorldPosition();
+  
+  // Only rotate the crab if the mouse is a certain distance away from the crab
+  // This prevents jittery rotation when the mouse is very close to the crab
+  const distanceToMouse = new THREE.Vector2(
+    mouseWorldPosition.x - playerCrab.position.x,
+    mouseWorldPosition.z - playerCrab.position.z
+  ).length();
+  
+  if (distanceToMouse > 0.5) {
+    // Calculate direction from player to mouse point
+    const directionX = mouseWorldPosition.x - playerCrab.position.x;
+    const directionZ = mouseWorldPosition.z - playerCrab.position.z;
+    
+    // Calculate angle to face the mouse position
+    const targetRotation = Math.atan2(directionX, directionZ);
+    
+    // Smoothly rotate towards the target rotation with improved interpolation
+    const rotationDiff = targetRotation - playerCrab.rotation.y;
+    
+    // Handle the case where the difference crosses the -PI/PI boundary
+    let shortestRotationDiff = ((rotationDiff + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (shortestRotationDiff < -Math.PI) {
+      shortestRotationDiff += Math.PI * 2;
+    }
+    
+    // Apply smooth rotation with faster response for larger differences
